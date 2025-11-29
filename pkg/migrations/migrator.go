@@ -326,12 +326,6 @@ func (m *Migrator) loadMigrations() ([]*Migration, error) {
 		},
 		{
 			Version: 9,
-			Name:    "add_email_verified_column",
-			UpSQL:   getAddEmailVerifiedColumnSQL(m.driver),
-			DownSQL: getDropEmailVerifiedColumnSQL(m.driver),
-		},
-		{
-			Version: 10,
 			Name:    "create_oauth_accounts_table",
 			UpSQL:   getCreateOAuthAccountsTableSQL(m.driver),
 			DownSQL: getDropOAuthAccountsTableSQL(m.driver),
