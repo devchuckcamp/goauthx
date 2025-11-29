@@ -18,6 +18,18 @@ A comprehensive, production-ready authentication and authorization library for G
 - ✅ **Migration System**: Built-in database migration tool
 - ✅ **Middleware Support**: Ready-to-use HTTP middleware for authentication and authorization
 
+## Real-World Usage
+
+See **goauthx** in action in a production e-commerce API built with the Gin framework:
+
+🔗 **[gocommerce-api](https://github.com/devchuckcamp/gocommerce-api)** - A complete e-commerce REST API demonstrating:
+- Gin framework integration with goauthx
+- JWT authentication for protected routes
+- Role-based authorization (admin, customer roles)
+- Google OAuth login implementation
+- User registration and management
+- Production-ready authentication middleware
+
 ## Quick Start
 
 ### Installation
