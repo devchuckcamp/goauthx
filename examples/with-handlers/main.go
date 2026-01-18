@@ -49,7 +49,14 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 	log.Println("Migrations completed successfully")
-	
+
+	// Seed RBAC roles and permissions
+	seeder := goauthx.NewSeeder(store)
+	if err := seeder.SeedAll(context.Background()); err != nil {
+		log.Fatalf("Failed to seed RBAC: %v", err)
+	}
+	log.Println("RBAC seeding completed successfully")
+
 	// Create the auth service
 	authService, err := goauthx.NewService(cfg, store)
 	if err != nil {
@@ -62,7 +69,11 @@ func main() {
 	// Option 1: Use pre-built handlers with default routes
 	handlers := goauthx.NewHandlers(authService, nil) // nil uses default routes
 	handlers.RegisterRoutes(mux)
-	
+
+	// Register admin handlers for RBAC management (requires admin role)
+	adminHandlers := goauthx.NewAdminHandlers(authService, store, nil)
+	adminHandlers.RegisterRoutes(mux)
+
 	// Option 2: Use custom routes (commented out example)
 	// routeConfig := goauthx.DefaultRouteConfig()
 	// routeConfig.RegisterPath = "/api/register"  // Customize paths
@@ -89,6 +100,13 @@ func main() {
 				"google_oauth": "GET /auth/google - Sign in with Google",
 				"google_oauth_callback": "GET /auth/google/callback - Google OAuth callback",
 				"unlink_google": "POST /auth/google/unlink - Unlink Google account (authenticated)"
+			},
+			"admin_endpoints": {
+				"list_roles": "GET /admin/roles (admin only)",
+				"create_role": "POST /admin/roles (admin only)",
+				"list_permissions": "GET /admin/permissions (admin only)",
+				"assign_role": "POST /admin/users/{id}/roles (admin only)",
+				"grant_permission": "POST /admin/roles/{id}/permissions (admin only)"
 			}
 		}`))
 	})
@@ -109,6 +127,13 @@ func main() {
 	log.Println("  GET  /auth/google - Sign in with Google")
 	log.Println("  GET  /auth/google/callback - Google OAuth callback")
 	log.Println("  POST /auth/google/unlink - Unlink Google account (authenticated)")
+	log.Println("")
+	log.Println("Admin endpoints (requires admin role):")
+	log.Println("  GET/POST /admin/roles - List/Create roles")
+	log.Println("  GET/PUT/DELETE /admin/roles/{id} - Manage role")
+	log.Println("  GET/POST /admin/permissions - List/Create permissions")
+	log.Println("  GET/POST/DELETE /admin/users/{id}/roles - Manage user roles")
+	log.Println("  GET/POST/DELETE /admin/roles/{id}/permissions - Manage role permissions")
 	
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatalf("Server failed: %v", err)

@@ -171,6 +171,15 @@ func (m *MockStore) GetPermissionByName(ctx context.Context, name string) (*mode
 	return permission, nil
 }
 
+func (m *MockStore) GetPermissionByResourceAction(ctx context.Context, resource, action string) (*models.Permission, error) {
+	for _, permission := range m.permissions {
+		if permission.Resource == resource && permission.Action == action {
+			return permission, nil
+		}
+	}
+	return nil, fmt.Errorf("permission not found")
+}
+
 func (m *MockStore) ListPermissions(ctx context.Context) ([]*models.Permission, error) {
 	var permissions []*models.Permission
 	for _, permission := range m.permissions {
@@ -305,6 +314,34 @@ func (m *MockStore) GetPermissionRoles(ctx context.Context, permissionID string)
 		}
 	}
 	return roles, nil
+}
+
+func (m *MockStore) HasRolePermission(ctx context.Context, roleID, permissionID string) (bool, error) {
+	permIDs := m.rolePermissions[roleID]
+	for _, permID := range permIDs {
+		if permID == permissionID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (m *MockStore) HasPermissionByName(ctx context.Context, userID, permissionName string) (bool, error) {
+	// Get user's roles
+	roleIDs := m.userRoles[userID]
+
+	// Check each role for the permission
+	for _, roleID := range roleIDs {
+		permIDs := m.rolePermissions[roleID]
+		for _, permID := range permIDs {
+			if perm, exists := m.permissions[permID]; exists {
+				if perm.Name == permissionName {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
 }
 
 // Refresh token operations

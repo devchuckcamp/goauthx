@@ -53,19 +53,22 @@ type RoleStore interface {
 type PermissionStore interface {
 	// Create creates a new permission
 	Create(ctx context.Context, permission *models.Permission) error
-	
+
 	// GetByID retrieves a permission by its ID
 	GetByID(ctx context.Context, id string) (*models.Permission, error)
-	
+
 	// GetByName retrieves a permission by its name
 	GetByName(ctx context.Context, name string) (*models.Permission, error)
-	
+
+	// GetByResourceAction retrieves a permission by resource and action
+	GetByResourceAction(ctx context.Context, resource, action string) (*models.Permission, error)
+
 	// List retrieves all permissions
 	List(ctx context.Context) ([]*models.Permission, error)
-	
+
 	// Update updates an existing permission
 	Update(ctx context.Context, permission *models.Permission) error
-	
+
 	// Delete deletes a permission
 	Delete(ctx context.Context, id string) error
 }
@@ -92,15 +95,18 @@ type UserRoleStore interface {
 type RolePermissionStore interface {
 	// GrantPermission grants a permission to a role
 	GrantPermission(ctx context.Context, roleID, permissionID string) error
-	
+
 	// RevokePermission revokes a permission from a role
 	RevokePermission(ctx context.Context, roleID, permissionID string) error
-	
+
 	// GetRolePermissions retrieves all permissions for a role
 	GetRolePermissions(ctx context.Context, roleID string) ([]*models.Permission, error)
-	
+
 	// GetPermissionRoles retrieves all roles that have a specific permission
 	GetPermissionRoles(ctx context.Context, permissionID string) ([]*models.Role, error)
+
+	// HasPermission checks if a role has a specific permission
+	HasPermission(ctx context.Context, roleID, permissionID string) (bool, error)
 }
 
 // RefreshTokenStore defines the interface for refresh token operations
@@ -146,6 +152,7 @@ type Store interface {
 	CreatePermission(ctx context.Context, permission *models.Permission) error
 	GetPermissionByID(ctx context.Context, id string) (*models.Permission, error)
 	GetPermissionByName(ctx context.Context, name string) (*models.Permission, error)
+	GetPermissionByResourceAction(ctx context.Context, resource, action string) (*models.Permission, error)
 	ListPermissions(ctx context.Context) ([]*models.Permission, error)
 	UpdatePermission(ctx context.Context, permission *models.Permission) error
 	DeletePermission(ctx context.Context, id string) error
@@ -162,6 +169,8 @@ type Store interface {
 	RevokePermission(ctx context.Context, roleID, permissionID string) error
 	GetRolePermissions(ctx context.Context, roleID string) ([]*models.Permission, error)
 	GetPermissionRoles(ctx context.Context, permissionID string) ([]*models.Role, error)
+	HasRolePermission(ctx context.Context, roleID, permissionID string) (bool, error)
+	HasPermissionByName(ctx context.Context, userID, permissionName string) (bool, error)
 	
 	// Refresh token operations
 	CreateRefreshToken(ctx context.Context, token *models.RefreshToken) error

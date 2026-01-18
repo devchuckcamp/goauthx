@@ -246,7 +246,7 @@ func (s *Service) GetUserPermissions(ctx context.Context, userID string) ([]*mod
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Collect all permissions from all roles
 	permMap := make(map[string]*models.Permission)
 	for _, role := range roles {
@@ -254,19 +254,161 @@ func (s *Service) GetUserPermissions(ctx context.Context, userID string) ([]*mod
 		if err != nil {
 			return nil, err
 		}
-		
+
 		for _, perm := range permissions {
 			permMap[perm.ID] = perm
 		}
 	}
-	
+
 	// Convert map to slice
 	permissions := make([]*models.Permission, 0, len(permMap))
 	for _, perm := range permMap {
 		permissions = append(permissions, perm)
 	}
-	
+
 	return permissions, nil
+}
+
+// GetUserRoles retrieves all roles for a user
+func (s *Service) GetUserRoles(ctx context.Context, userID string) ([]*models.Role, error) {
+	return s.store.GetUserRoles(ctx, userID)
+}
+
+// AssignRole assigns a role to a user by role name
+func (s *Service) AssignRole(ctx context.Context, userID, roleName string) error {
+	// Get the role by name
+	role, err := s.store.GetRoleByName(ctx, roleName)
+	if err != nil {
+		return fmt.Errorf("role not found: %w", err)
+	}
+
+	// Check if user exists
+	_, err = s.store.GetUserByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// Check if user already has this role
+	hasRole, err := s.store.HasRole(ctx, userID, roleName)
+	if err != nil {
+		return fmt.Errorf("failed to check role: %w", err)
+	}
+	if hasRole {
+		return nil // Already has the role
+	}
+
+	// Assign the role
+	return s.store.AssignRole(ctx, userID, role.ID)
+}
+
+// AssignRoleByID assigns a role to a user by role ID
+func (s *Service) AssignRoleByID(ctx context.Context, userID, roleID string) error {
+	// Check if role exists
+	_, err := s.store.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return fmt.Errorf("role not found: %w", err)
+	}
+
+	// Check if user exists
+	_, err = s.store.GetUserByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// Assign the role
+	return s.store.AssignRole(ctx, userID, roleID)
+}
+
+// RemoveRole removes a role from a user by role name
+func (s *Service) RemoveRole(ctx context.Context, userID, roleName string) error {
+	// Get the role by name
+	role, err := s.store.GetRoleByName(ctx, roleName)
+	if err != nil {
+		return fmt.Errorf("role not found: %w", err)
+	}
+
+	// Check if user exists
+	_, err = s.store.GetUserByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// Remove the role
+	return s.store.RemoveRole(ctx, userID, role.ID)
+}
+
+// RemoveRoleByID removes a role from a user by role ID
+func (s *Service) RemoveRoleByID(ctx context.Context, userID, roleID string) error {
+	// Check if role exists
+	_, err := s.store.GetRoleByID(ctx, roleID)
+	if err != nil {
+		return fmt.Errorf("role not found: %w", err)
+	}
+
+	// Check if user exists
+	_, err = s.store.GetUserByID(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	// Remove the role
+	return s.store.RemoveRole(ctx, userID, roleID)
+}
+
+// HasAnyPermission checks if a user has any of the specified permissions
+func (s *Service) HasAnyPermission(ctx context.Context, userID string, permissionNames []string) (bool, error) {
+	for _, permName := range permissionNames {
+		hasPerm, err := s.HasPermission(ctx, userID, permName)
+		if err != nil {
+			return false, err
+		}
+		if hasPerm {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// HasAllPermissions checks if a user has all of the specified permissions
+func (s *Service) HasAllPermissions(ctx context.Context, userID string, permissionNames []string) (bool, error) {
+	for _, permName := range permissionNames {
+		hasPerm, err := s.HasPermission(ctx, userID, permName)
+		if err != nil {
+			return false, err
+		}
+		if !hasPerm {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// HasAnyRole checks if a user has any of the specified roles
+func (s *Service) HasAnyRole(ctx context.Context, userID string, roleNames []string) (bool, error) {
+	for _, roleName := range roleNames {
+		hasRole, err := s.HasRole(ctx, userID, roleName)
+		if err != nil {
+			return false, err
+		}
+		if hasRole {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// HasAllRoles checks if a user has all of the specified roles
+func (s *Service) HasAllRoles(ctx context.Context, userID string, roleNames []string) (bool, error) {
+	for _, roleName := range roleNames {
+		hasRole, err := s.HasRole(ctx, userID, roleName)
+		if err != nil {
+			return false, err
+		}
+		if !hasRole {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // generateAuthResponse generates an authentication response with tokens

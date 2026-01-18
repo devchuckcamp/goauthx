@@ -97,13 +97,13 @@ func (s *SQLStore) GetPermissionRoles(ctx context.Context, permissionID string) 
 			ORDER BY r.name ASC
 		`
 	}
-	
+
 	rows, err := s.executor().QueryContext(ctx, query, permissionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get permission roles: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var roles []*models.Role
 	for rows.Next() {
 		role := &models.Role{}
@@ -112,10 +112,54 @@ func (s *SQLStore) GetPermissionRoles(ctx context.Context, permissionID string) 
 		}
 		roles = append(roles, role)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating roles: %w", err)
 	}
-	
+
 	return roles, nil
+}
+
+// HasRolePermission checks if a role has a specific permission
+func (s *SQLStore) HasRolePermission(ctx context.Context, roleID, permissionID string) (bool, error) {
+	query := `SELECT COUNT(*) FROM role_permissions WHERE role_id = ? AND permission_id = ?`
+	if s.driver == "postgres" {
+		query = `SELECT COUNT(*) FROM role_permissions WHERE role_id = $1 AND permission_id = $2`
+	}
+
+	var count int
+	err := s.executor().QueryRowContext(ctx, query, roleID, permissionID).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check role permission: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+// HasPermissionByName checks if a user has a specific permission by permission name
+func (s *SQLStore) HasPermissionByName(ctx context.Context, userID, permissionName string) (bool, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM permissions p
+		INNER JOIN role_permissions rp ON rp.permission_id = p.id
+		INNER JOIN user_roles ur ON ur.role_id = rp.role_id
+		WHERE ur.user_id = ? AND p.name = ?
+	`
+	if s.driver == "postgres" {
+		query = `
+			SELECT COUNT(*)
+			FROM permissions p
+			INNER JOIN role_permissions rp ON rp.permission_id = p.id
+			INNER JOIN user_roles ur ON ur.role_id = rp.role_id
+			WHERE ur.user_id = $1 AND p.name = $2
+		`
+	}
+
+	var count int
+	err := s.executor().QueryRowContext(ctx, query, userID, permissionName).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("failed to check user permission: %w", err)
+	}
+
+	return count > 0, nil
 }

@@ -122,11 +122,34 @@ func (s *SQLStore) DeletePermission(ctx context.Context, id string) error {
 	if s.driver == "postgres" {
 		query = `DELETE FROM permissions WHERE id = $1`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete permission: %w", err)
 	}
-	
+
 	return nil
+}
+
+// GetPermissionByResourceAction retrieves a permission by resource and action
+func (s *SQLStore) GetPermissionByResourceAction(ctx context.Context, resource, action string) (*models.Permission, error) {
+	query := `SELECT id, name, resource, action, description, created_at, updated_at FROM permissions WHERE resource = ? AND action = ?`
+	if s.driver == "postgres" {
+		query = `SELECT id, name, resource, action, description, created_at, updated_at FROM permissions WHERE resource = $1 AND action = $2`
+	}
+
+	permission := &models.Permission{}
+	err := s.executor().QueryRowContext(ctx, query, resource, action).Scan(
+		&permission.ID, &permission.Name, &permission.Resource, &permission.Action,
+		&permission.Description, &permission.CreatedAt, &permission.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("permission not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get permission: %w", err)
+	}
+
+	return permission, nil
 }

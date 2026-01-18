@@ -372,6 +372,72 @@ curl -X POST http://localhost:8080/auth/google/unlink \
 - **User-Role Assignment**: Users can have multiple roles
 - **Role-Permission Assignment**: Roles can have multiple permissions
 
+### RBAC (Role-Based Access Control)
+
+goauthx provides a comprehensive RBAC system with predefined roles and permissions. For detailed documentation, see [docs/rbac.md](docs/rbac.md).
+
+**Predefined Roles:**
+- `goauthx.RoleAdmin` - Full access to all resources
+- `goauthx.RoleManager` - Access to products, orders, and reports
+- `goauthx.RoleCustomerExperience` - Customer support access
+- `goauthx.RoleCustomer` - Regular user with limited access (default)
+
+**Seed the database with predefined roles and permissions:**
+
+```go
+seeder := goauthx.NewSeeder(store)
+if err := seeder.SeedAll(ctx); err != nil {
+    log.Fatal(err)
+}
+```
+
+**Protect routes with role-based middleware:**
+
+```go
+// Require admin role
+mux.Handle("/admin/dashboard",
+    authMiddleware.Authenticate(
+        authMiddleware.RequireRole("admin")(handler),
+    ),
+)
+
+// Require any of multiple roles
+mux.Handle("/reports",
+    authMiddleware.Authenticate(
+        authMiddleware.RequireAnyRole("admin", "manager")(handler),
+    ),
+)
+
+// Require specific permission
+mux.Handle("/products/create",
+    authMiddleware.Authenticate(
+        authMiddleware.RequirePermission("product:create")(handler),
+    ),
+)
+
+// Allow owner or admin
+mux.Handle("/users/",
+    authMiddleware.Authenticate(
+        authMiddleware.RequireOwnerOrRole(getUserIDFromRequest, "admin")(handler),
+    ),
+)
+```
+
+**Admin API endpoints for RBAC management:**
+
+```go
+adminHandlers := goauthx.NewAdminHandlers(authService, store, nil)
+adminHandlers.RegisterRoutes(mux)
+
+// Endpoints available:
+// GET/POST   /admin/roles              - List/Create roles
+// GET/PUT/DELETE /admin/roles/{id}     - Manage role
+// GET/POST   /admin/permissions        - List/Create permissions
+// GET/PUT/DELETE /admin/permissions/{id} - Manage permission
+// GET/POST/DELETE /admin/users/{id}/roles - Manage user roles
+// GET/POST/DELETE /admin/roles/{id}/permissions - Manage role permissions
+```
+
 ### Checking Permissions
 
 ```go
@@ -379,10 +445,19 @@ curl -X POST http://localhost:8080/auth/google/unlink \
 hasRole, err := authService.HasRole(ctx, userID, "admin")
 
 // Check if user has a permission
-hasPerm, err := authService.HasPermission(ctx, userID, "posts:write")
+hasPerm, err := authService.HasPermission(ctx, userID, "product:create")
+
+// Check if user has any of the specified permissions
+hasAny, err := authService.HasAnyPermission(ctx, userID, []string{"product:create", "product:update"})
+
+// Check if user has all of the specified permissions
+hasAll, err := authService.HasAllPermissions(ctx, userID, []string{"product:create", "product:read"})
 
 // Get all user permissions
 permissions, err := authService.GetUserPermissions(ctx, userID)
+
+// Get all user roles
+roles, err := authService.GetUserRoles(ctx, userID)
 ```
 
 ### Email Verification
@@ -526,6 +601,7 @@ For detailed documentation, see the `docs/` directory:
 - [Migrations](docs/migrations.md) - Migration system details
 - [Usage Examples](docs/usage-examples.md) - More code examples
 - [Google OAuth](docs/google-oauth.md) - Google OAuth integration guide
+- [RBAC](docs/rbac.md) - Role-Based Access Control system
 
 ## License
 

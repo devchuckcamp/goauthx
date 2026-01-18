@@ -146,19 +146,205 @@ func (m *AuthMiddleware) RequirePermission(permissionName string) func(http.Hand
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			
+
 			// Check if user has the required permission
 			hasPermission, err := m.service.HasPermission(r.Context(), userID, permissionName)
 			if err != nil {
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
 				return
 			}
-			
+
 			if !hasPermission {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
-			
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireAllRoles returns a middleware that checks if the user has all of the specified roles
+func (m *AuthMiddleware) RequireAllRoles(roleNames ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get user roles from context
+			userRoles, ok := r.Context().Value(UserRolesKey).([]string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Create a map for quick lookup
+			userRoleMap := make(map[string]bool)
+			for _, role := range userRoles {
+				userRoleMap[role] = true
+			}
+
+			// Check if user has all required roles
+			for _, requiredRole := range roleNames {
+				if !userRoleMap[requiredRole] {
+					http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+					return
+				}
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireAnyPermission returns a middleware that checks if the user has any of the specified permissions
+func (m *AuthMiddleware) RequireAnyPermission(permissionNames ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get user ID from context
+			userID, ok := r.Context().Value(UserIDKey).(string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Check if user has any of the required permissions
+			hasAnyPermission, err := m.service.HasAnyPermission(r.Context(), userID, permissionNames)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			if !hasAnyPermission {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireAllPermissions returns a middleware that checks if the user has all of the specified permissions
+func (m *AuthMiddleware) RequireAllPermissions(permissionNames ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get user ID from context
+			userID, ok := r.Context().Value(UserIDKey).(string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Check if user has all of the required permissions
+			hasAllPermissions, err := m.service.HasAllPermissions(r.Context(), userID, permissionNames)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			if !hasAllPermissions {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireOwnerOrPermission returns a middleware that allows access if:
+// 1. The authenticated user is the owner of the resource (userID matches the resource owner), OR
+// 2. The authenticated user has the specified permission
+//
+// getUserIDFromRequest is a function that extracts the resource owner's user ID from the request
+// (e.g., from URL parameters like /users/:id)
+func (m *AuthMiddleware) RequireOwnerOrPermission(
+	getUserIDFromRequest func(*http.Request) string,
+	permissionName string,
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get authenticated user ID from context
+			authenticatedUserID, ok := r.Context().Value(UserIDKey).(string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Get resource owner ID from request
+			resourceOwnerID := getUserIDFromRequest(r)
+
+			// Check if user is the owner
+			if authenticatedUserID == resourceOwnerID {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// If not owner, check if user has the required permission
+			hasPermission, err := m.service.HasPermission(r.Context(), authenticatedUserID, permissionName)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+
+			if !hasPermission {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// RequireOwnerOrRole returns a middleware that allows access if:
+// 1. The authenticated user is the owner of the resource, OR
+// 2. The authenticated user has any of the specified roles
+func (m *AuthMiddleware) RequireOwnerOrRole(
+	getUserIDFromRequest func(*http.Request) string,
+	roleNames ...string,
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Get authenticated user ID from context
+			authenticatedUserID, ok := r.Context().Value(UserIDKey).(string)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Get resource owner ID from request
+			resourceOwnerID := getUserIDFromRequest(r)
+
+			// Check if user is the owner
+			if authenticatedUserID == resourceOwnerID {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// If not owner, check if user has any of the required roles
+			userRoles, ok := r.Context().Value(UserRolesKey).([]string)
+			if !ok {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			hasRole := false
+			for _, userRole := range userRoles {
+				for _, requiredRole := range roleNames {
+					if userRole == requiredRole {
+						hasRole = true
+						break
+					}
+				}
+				if hasRole {
+					break
+				}
+			}
+
+			if !hasRole {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
 			next.ServeHTTP(w, r)
 		})
 	}
