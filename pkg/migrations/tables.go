@@ -248,6 +248,54 @@ CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_i
 	}
 }
 
+func getCreateUserPermissionsTableSQL(driver config.DatabaseDriver) string {
+	switch driver {
+	case config.MySQL:
+		return `
+CREATE TABLE user_permissions (
+	user_id VARCHAR(36) NOT NULL,
+	permission_id VARCHAR(36) NOT NULL,
+	granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id, permission_id),
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE,
+	INDEX idx_user_permissions_user_id (user_id),
+	INDEX idx_user_permissions_permission_id (permission_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+`
+	case config.Postgres:
+		return `
+CREATE TABLE user_permissions (
+	user_id VARCHAR(36) NOT NULL,
+	permission_id VARCHAR(36) NOT NULL,
+	granted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id, permission_id),
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_permissions_user_id ON user_permissions(user_id);
+CREATE INDEX idx_user_permissions_permission_id ON user_permissions(permission_id);
+`
+	case config.SQLServer:
+		return `
+CREATE TABLE user_permissions (
+	user_id NVARCHAR(36) NOT NULL,
+	permission_id NVARCHAR(36) NOT NULL,
+	granted_at DATETIME NOT NULL DEFAULT GETDATE(),
+	PRIMARY KEY (user_id, permission_id),
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+	FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_user_permissions_user_id ON user_permissions(user_id);
+CREATE INDEX idx_user_permissions_permission_id ON user_permissions(permission_id);
+`
+	default:
+		return ""
+	}
+}
+
 func getCreateRefreshTokensTableSQL(driver config.DatabaseDriver) string {
 	switch driver {
 	case config.MySQL:

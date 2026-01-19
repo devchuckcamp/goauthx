@@ -14,12 +14,12 @@ func (s *SQLStore) GrantPermission(ctx context.Context, roleID, permissionID str
 	if s.driver == "postgres" {
 		query = `INSERT INTO role_permissions (role_id, permission_id, granted_at) VALUES ($1, $2, $3)`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, roleID, permissionID, time.Now())
 	if err != nil {
 		return fmt.Errorf("failed to grant permission: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -29,12 +29,12 @@ func (s *SQLStore) RevokePermission(ctx context.Context, roleID, permissionID st
 	if s.driver == "postgres" {
 		query = `DELETE FROM role_permissions WHERE role_id = $1 AND permission_id = $2`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, roleID, permissionID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke permission: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -56,13 +56,13 @@ func (s *SQLStore) GetRolePermissions(ctx context.Context, roleID string) ([]*mo
 			ORDER BY p.name ASC
 		`
 	}
-	
+
 	rows, err := s.executor().QueryContext(ctx, query, roleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role permissions: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var permissions []*models.Permission
 	for rows.Next() {
 		permission := &models.Permission{}
@@ -71,11 +71,11 @@ func (s *SQLStore) GetRolePermissions(ctx context.Context, roleID string) ([]*mo
 		}
 		permissions = append(permissions, permission)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating permissions: %w", err)
 	}
-	
+
 	return permissions, nil
 }
 
@@ -140,23 +140,44 @@ func (s *SQLStore) HasRolePermission(ctx context.Context, roleID, permissionID s
 func (s *SQLStore) HasPermissionByName(ctx context.Context, userID, permissionName string) (bool, error) {
 	query := `
 		SELECT COUNT(*)
-		FROM permissions p
-		INNER JOIN role_permissions rp ON rp.permission_id = p.id
-		INNER JOIN user_roles ur ON ur.role_id = rp.role_id
-		WHERE ur.user_id = ? AND p.name = ?
+		FROM (
+			SELECT p.id
+			FROM permissions p
+			INNER JOIN role_permissions rp ON rp.permission_id = p.id
+			INNER JOIN user_roles ur ON ur.role_id = rp.role_id
+			WHERE ur.user_id = ? AND p.name = ?
+			UNION
+			SELECT p.id
+			FROM permissions p
+			INNER JOIN user_permissions up ON up.permission_id = p.id
+			WHERE up.user_id = ? AND p.name = ?
+		) t
 	`
 	if s.driver == "postgres" {
 		query = `
 			SELECT COUNT(*)
-			FROM permissions p
-			INNER JOIN role_permissions rp ON rp.permission_id = p.id
-			INNER JOIN user_roles ur ON ur.role_id = rp.role_id
-			WHERE ur.user_id = $1 AND p.name = $2
+			FROM (
+				SELECT p.id
+				FROM permissions p
+				INNER JOIN role_permissions rp ON rp.permission_id = p.id
+				INNER JOIN user_roles ur ON ur.role_id = rp.role_id
+				WHERE ur.user_id = $1 AND p.name = $2
+				UNION
+				SELECT p.id
+				FROM permissions p
+				INNER JOIN user_permissions up ON up.permission_id = p.id
+				WHERE up.user_id = $1 AND p.name = $2
+			) t
 		`
 	}
 
 	var count int
-	err := s.executor().QueryRowContext(ctx, query, userID, permissionName).Scan(&count)
+	args := []any{userID, permissionName, userID, permissionName}
+	if s.driver == "postgres" {
+		args = []any{userID, permissionName}
+	}
+
+	err := s.executor().QueryRowContext(ctx, query, args...).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check user permission: %w", err)
 	}

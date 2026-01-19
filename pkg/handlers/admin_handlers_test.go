@@ -69,44 +69,44 @@ func TestExtractIDFromPath(t *testing.T) {
 
 func TestExtractSubResource(t *testing.T) {
 	tests := []struct {
-		name            string
-		path            string
-		prefix          string
-		expectedID      string
-		expectedSub     string
-		expectedSubID   string
+		name          string
+		path          string
+		prefix        string
+		expectedID    string
+		expectedSub   string
+		expectedSubID string
 	}{
 		{
-			name:            "ID only",
-			path:            "/admin/roles/123",
-			prefix:          "/admin/roles/",
-			expectedID:      "123",
-			expectedSub:     "",
-			expectedSubID:   "",
+			name:          "ID only",
+			path:          "/admin/roles/123",
+			prefix:        "/admin/roles/",
+			expectedID:    "123",
+			expectedSub:   "",
+			expectedSubID: "",
 		},
 		{
-			name:            "ID with sub-resource",
-			path:            "/admin/roles/123/permissions",
-			prefix:          "/admin/roles/",
-			expectedID:      "123",
-			expectedSub:     "permissions",
-			expectedSubID:   "",
+			name:          "ID with sub-resource",
+			path:          "/admin/roles/123/permissions",
+			prefix:        "/admin/roles/",
+			expectedID:    "123",
+			expectedSub:   "permissions",
+			expectedSubID: "",
 		},
 		{
-			name:            "ID with sub-resource and sub-ID",
-			path:            "/admin/roles/123/permissions/456",
-			prefix:          "/admin/roles/",
-			expectedID:      "123",
-			expectedSub:     "permissions",
-			expectedSubID:   "456",
+			name:          "ID with sub-resource and sub-ID",
+			path:          "/admin/roles/123/permissions/456",
+			prefix:        "/admin/roles/",
+			expectedID:    "123",
+			expectedSub:   "permissions",
+			expectedSubID: "456",
 		},
 		{
-			name:            "empty after prefix",
-			path:            "/admin/roles/",
-			prefix:          "/admin/roles/",
-			expectedID:      "",
-			expectedSub:     "",
-			expectedSubID:   "",
+			name:          "empty after prefix",
+			path:          "/admin/roles/",
+			prefix:        "/admin/roles/",
+			expectedID:    "",
+			expectedSub:   "",
+			expectedSubID: "",
 		},
 	}
 

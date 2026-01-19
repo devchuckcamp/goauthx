@@ -3,23 +3,28 @@ package config
 // AdminRouteConfig holds HTTP route configuration for admin endpoints
 type AdminRouteConfig struct {
 	// Role management routes
-	ListRolesPath   string
-	CreateRolePath  string
-	GetRolePath     string
-	UpdateRolePath  string
-	DeleteRolePath  string
+	ListRolesPath  string
+	CreateRolePath string
+	GetRolePath    string
+	UpdateRolePath string
+	DeleteRolePath string
 
 	// Permission management routes
-	ListPermissionsPath   string
-	CreatePermissionPath  string
-	GetPermissionPath     string
-	UpdatePermissionPath  string
-	DeletePermissionPath  string
+	ListPermissionsPath  string
+	CreatePermissionPath string
+	GetPermissionPath    string
+	UpdatePermissionPath string
+	DeletePermissionPath string
 
 	// User role management routes
-	AssignUserRolePath  string
-	RemoveUserRolePath  string
-	GetUserRolesPath    string
+	AssignUserRolePath string
+	RemoveUserRolePath string
+	GetUserRolesPath   string
+
+	// User permission management routes
+	GrantUserPermissionPath  string
+	RevokeUserPermissionPath string
+	GetUserPermissionsPath   string
 
 	// Role permission management routes
 	GrantRolePermissionPath  string
@@ -31,23 +36,28 @@ type AdminRouteConfig struct {
 func DefaultAdminRouteConfig() *AdminRouteConfig {
 	return &AdminRouteConfig{
 		// Role management
-		ListRolesPath:   "/admin/roles",
-		CreateRolePath:  "/admin/roles",
-		GetRolePath:     "/admin/roles/", // + {id}
-		UpdateRolePath:  "/admin/roles/", // + {id}
-		DeleteRolePath:  "/admin/roles/", // + {id}
+		ListRolesPath:  "/admin/roles",
+		CreateRolePath: "/admin/roles",
+		GetRolePath:    "/admin/roles/", // + {id}
+		UpdateRolePath: "/admin/roles/", // + {id}
+		DeleteRolePath: "/admin/roles/", // + {id}
 
 		// Permission management
-		ListPermissionsPath:   "/admin/permissions",
-		CreatePermissionPath:  "/admin/permissions",
-		GetPermissionPath:     "/admin/permissions/", // + {id}
-		UpdatePermissionPath:  "/admin/permissions/", // + {id}
-		DeletePermissionPath:  "/admin/permissions/", // + {id}
+		ListPermissionsPath:  "/admin/permissions",
+		CreatePermissionPath: "/admin/permissions",
+		GetPermissionPath:    "/admin/permissions/", // + {id}
+		UpdatePermissionPath: "/admin/permissions/", // + {id}
+		DeletePermissionPath: "/admin/permissions/", // + {id}
 
 		// User role management
-		AssignUserRolePath:  "/admin/users/", // + {id}/roles
-		RemoveUserRolePath:  "/admin/users/", // + {id}/roles/{roleId}
-		GetUserRolesPath:    "/admin/users/", // + {id}/roles
+		AssignUserRolePath: "/admin/users/", // + {id}/roles
+		RemoveUserRolePath: "/admin/users/", // + {id}/roles/{roleId}
+		GetUserRolesPath:   "/admin/users/", // + {id}/roles
+
+		// User permission management
+		GrantUserPermissionPath:  "/admin/users/", // + {id}/permissions
+		RevokeUserPermissionPath: "/admin/users/", // + {id}/permissions/{permId}
+		GetUserPermissionsPath:   "/admin/users/", // + {id}/permissions
 
 		// Role permission management
 		GrantRolePermissionPath:  "/admin/roles/", // + {id}/permissions

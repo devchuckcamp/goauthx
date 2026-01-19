@@ -9,6 +9,26 @@ The RBAC system consists of:
 - **Permissions**: Specific actions on resources (e.g., `product:create`, `order:read`)
 - **Role-Permission Mappings**: Relationships defining which permissions each role has
 - **User-Role Assignments**: Relationships defining which roles each user has
+- **User-Permission Grants**: Optional direct permission grants per user (for exceptions/overrides)
+
+## User-Specific Permissions (Direct Grants)
+
+By default, permissions come from roles. For common “exception” cases (e.g., a manager who also needs access to a specific admin/report capability), goauthx supports granting permissions **directly** to a user via a `user_permissions` join table.
+
+### Effective permissions
+
+A user’s effective permissions are the union of:
+- permissions from all assigned roles
+- permissions granted directly to the user
+
+`service.HasPermission(...)` and the permission-related middleware use this effective set.
+
+### Admin endpoints
+
+If you use `AdminHandlers`, user permissions can be managed via:
+- `GET /admin/users/{id}/permissions` (returns direct + effective permissions)
+- `POST /admin/users/{id}/permissions` (grant direct permission)
+- `DELETE /admin/users/{id}/permissions/{permissionId}` (revoke direct permission)
 
 ## Predefined Roles
 

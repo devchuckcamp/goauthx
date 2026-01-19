@@ -25,24 +25,24 @@ func main() {
 		Issuer:            "my-app",
 		Audience:          "my-app-users",
 	}
-	
+
 	// Configure Google OAuth
 	cfg.OAuth = goauthx.OAuthConfig{
 		Google: goauthx.GoogleOAuthConfig{
 			ClientID:     "<GOOGLE_ACCOUNT_CLIENT_ID>",
-            ClientSecret: "<GOOGLE_ACCOUNT_Secret>",
+			ClientSecret: "<GOOGLE_ACCOUNT_Secret>",
 			RedirectURL:  "http://localhost:8080/auth/google/callback",
 			Enabled:      true,
 		},
 	}
-	
+
 	// Create the store
 	store, err := goauthx.NewStore(cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to create store: %v", err)
 	}
 	defer store.Close()
-	
+
 	// Run migrations
 	migrator := goauthx.NewMigrator(store, cfg.Database.Driver)
 	if err := migrator.Up(context.Background()); err != nil {
@@ -62,10 +62,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create auth service: %v", err)
 	}
-	
+
 	// Create HTTP mux
 	mux := http.NewServeMux()
-	
+
 	// Option 1: Use pre-built handlers with default routes
 	handlers := goauthx.NewHandlers(authService, nil) // nil uses default routes
 	handlers.RegisterRoutes(mux)
@@ -80,7 +80,7 @@ func main() {
 	// routeConfig.LoginPath = "/api/login"
 	// handlers := goauthx.NewHandlers(authService, routeConfig)
 	// handlers.RegisterRoutes(mux)
-	
+
 	// Add a welcome endpoint
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -110,7 +110,7 @@ func main() {
 			}
 		}`))
 	})
-	
+
 	// Start server
 	log.Println("Server starting on :8080")
 	log.Println("Available endpoints:")
@@ -134,7 +134,7 @@ func main() {
 	log.Println("  GET/POST /admin/permissions - List/Create permissions")
 	log.Println("  GET/POST/DELETE /admin/users/{id}/roles - Manage user roles")
 	log.Println("  GET/POST/DELETE /admin/roles/{id}/permissions - Manage role permissions")
-	
+
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

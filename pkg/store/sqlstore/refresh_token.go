@@ -15,19 +15,19 @@ func (s *SQLStore) CreateRefreshToken(ctx context.Context, token *models.Refresh
 	if token.ID == "" {
 		token.ID = uuid.New().String()
 	}
-	
+
 	token.CreatedAt = time.Now()
-	
+
 	query := `INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`
 	if s.driver == "postgres" {
 		query = `INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at) VALUES ($1, $2, $3, $4, $5)`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, token.ID, token.UserID, token.Token, token.ExpiresAt, token.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create refresh token: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -37,17 +37,17 @@ func (s *SQLStore) GetRefreshTokenByToken(ctx context.Context, token string) (*m
 	if s.driver == "postgres" {
 		query = `SELECT id, user_id, token, expires_at, created_at, revoked_at FROM refresh_tokens WHERE token = $1`
 	}
-	
+
 	rt := &models.RefreshToken{}
 	err := s.executor().QueryRowContext(ctx, query, token).Scan(&rt.ID, &rt.UserID, &rt.Token, &rt.ExpiresAt, &rt.CreatedAt, &rt.RevokedAt)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("refresh token not found")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get refresh token: %w", err)
 	}
-	
+
 	return rt, nil
 }
 
@@ -57,13 +57,13 @@ func (s *SQLStore) GetRefreshTokensByUserID(ctx context.Context, userID string) 
 	if s.driver == "postgres" {
 		query = `SELECT id, user_id, token, expires_at, created_at, revoked_at FROM refresh_tokens WHERE user_id = $1 ORDER BY created_at DESC`
 	}
-	
+
 	rows, err := s.executor().QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get refresh tokens: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var tokens []*models.RefreshToken
 	for rows.Next() {
 		rt := &models.RefreshToken{}
@@ -72,11 +72,11 @@ func (s *SQLStore) GetRefreshTokensByUserID(ctx context.Context, userID string) 
 		}
 		tokens = append(tokens, rt)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating refresh tokens: %w", err)
 	}
-	
+
 	return tokens, nil
 }
 
@@ -87,12 +87,12 @@ func (s *SQLStore) RevokeRefreshToken(ctx context.Context, token string) error {
 	if s.driver == "postgres" {
 		query = `UPDATE refresh_tokens SET revoked_at = $1 WHERE token = $2`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, now, token)
 	if err != nil {
 		return fmt.Errorf("failed to revoke refresh token: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -103,12 +103,12 @@ func (s *SQLStore) RevokeAllRefreshTokensForUser(ctx context.Context, userID str
 	if s.driver == "postgres" {
 		query = `UPDATE refresh_tokens SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, now, userID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke all refresh tokens: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -118,11 +118,11 @@ func (s *SQLStore) DeleteExpiredRefreshTokens(ctx context.Context) error {
 	if s.driver == "postgres" {
 		query = `DELETE FROM refresh_tokens WHERE expires_at < $1`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, time.Now())
 	if err != nil {
 		return fmt.Errorf("failed to delete expired refresh tokens: %w", err)
 	}
-	
+
 	return nil
 }

@@ -15,13 +15,13 @@ type ContextKey string
 const (
 	// UserIDKey is the context key for user ID
 	UserIDKey ContextKey = "user_id"
-	
+
 	// UserEmailKey is the context key for user email
 	UserEmailKey ContextKey = "user_email"
-	
+
 	// UserRolesKey is the context key for user roles
 	UserRolesKey ContextKey = "user_roles"
-	
+
 	// ClaimsKey is the context key for JWT claims
 	ClaimsKey ContextKey = "claims"
 )
@@ -47,26 +47,26 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 			http.Error(w, "Authorization header required", http.StatusUnauthorized)
 			return
 		}
-		
+
 		tokenString, err := tokens.ExtractToken(authHeader)
 		if err != nil {
 			http.Error(w, "Invalid authorization header", http.StatusUnauthorized)
 			return
 		}
-		
+
 		// Validate token
 		claims, err := m.service.ValidateToken(tokenString)
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
-		
+
 		// Add claims to context
 		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
 		ctx = context.WithValue(ctx, UserEmailKey, claims.Email)
 		ctx = context.WithValue(ctx, UserRolesKey, claims.Roles)
 		ctx = context.WithValue(ctx, ClaimsKey, claims)
-		
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -81,7 +81,7 @@ func (m *AuthMiddleware) RequireRole(roleName string) func(http.Handler) http.Ha
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			
+
 			// Check if user has the required role
 			hasRole := false
 			for _, role := range roles {
@@ -90,12 +90,12 @@ func (m *AuthMiddleware) RequireRole(roleName string) func(http.Handler) http.Ha
 					break
 				}
 			}
-			
+
 			if !hasRole {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -111,7 +111,7 @@ func (m *AuthMiddleware) RequireAnyRole(roleNames ...string) func(http.Handler) 
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
-			
+
 			// Check if user has any of the required roles
 			hasRole := false
 			for _, userRole := range userRoles {
@@ -125,12 +125,12 @@ func (m *AuthMiddleware) RequireAnyRole(roleNames ...string) func(http.Handler) 
 					break
 				}
 			}
-			
+
 			if !hasRole {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
-			
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -390,11 +390,11 @@ func ExtractBearerToken(r *http.Request) (string, error) {
 	if authHeader == "" {
 		return "", auth.ErrInvalidCredentials
 	}
-	
+
 	parts := strings.SplitN(authHeader, " ", 2)
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		return "", auth.ErrInvalidCredentials
 	}
-	
+
 	return parts[1], nil
 }

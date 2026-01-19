@@ -4,15 +4,15 @@ import "time"
 
 // User represents an authenticated user in the system
 type User struct {
-	ID            string     `json:"id" db:"id"`
-	Email         string     `json:"email" db:"email"`
-	PasswordHash  string     `json:"-" db:"password_hash"`
-	FirstName     string     `json:"first_name,omitempty" db:"first_name"`
-	LastName      string     `json:"last_name,omitempty" db:"last_name"`
-	Active        bool       `json:"active" db:"active"`
-	EmailVerified bool       `json:"email_verified" db:"email_verified"`
-	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	ID            string    `json:"id" db:"id"`
+	Email         string    `json:"email" db:"email"`
+	PasswordHash  string    `json:"-" db:"password_hash"`
+	FirstName     string    `json:"first_name,omitempty" db:"first_name"`
+	LastName      string    `json:"last_name,omitempty" db:"last_name"`
+	Active        bool      `json:"active" db:"active"`
+	EmailVerified bool      `json:"email_verified" db:"email_verified"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Role represents a role that can be assigned to users
@@ -49,13 +49,21 @@ type RolePermission struct {
 	GrantedAt    time.Time `json:"granted_at" db:"granted_at"`
 }
 
+// UserPermission represents additional permissions granted directly to a user
+// (outside of role-based defaults)
+type UserPermission struct {
+	UserID       string    `json:"user_id" db:"user_id"`
+	PermissionID string    `json:"permission_id" db:"permission_id"`
+	GrantedAt    time.Time `json:"granted_at" db:"granted_at"`
+}
+
 // RefreshToken represents a refresh token for maintaining sessions
 type RefreshToken struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	Token     string    `json:"token" db:"token"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID        string     `json:"id" db:"id"`
+	UserID    string     `json:"user_id" db:"user_id"`
+	Token     string     `json:"token" db:"token"`
+	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	RevokedAt *time.Time `json:"revoked_at,omitempty" db:"revoked_at"`
 }
 
@@ -76,11 +84,11 @@ func (rt *RefreshToken) IsValid() bool {
 
 // EmailVerification represents an email verification token
 type EmailVerification struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	Token     string    `json:"token" db:"token"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID        string     `json:"id" db:"id"`
+	UserID    string     `json:"user_id" db:"user_id"`
+	Token     string     `json:"token" db:"token"`
+	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UsedAt    *time.Time `json:"used_at,omitempty" db:"used_at"`
 }
 
@@ -101,11 +109,11 @@ func (ev *EmailVerification) IsValid() bool {
 
 // PasswordReset represents a password reset token
 type PasswordReset struct {
-	ID        string    `json:"id" db:"id"`
-	UserID    string    `json:"user_id" db:"user_id"`
-	Token     string    `json:"token" db:"token"`
-	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID        string     `json:"id" db:"id"`
+	UserID    string     `json:"user_id" db:"user_id"`
+	Token     string     `json:"token" db:"token"`
+	ExpiresAt time.Time  `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
 	UsedAt    *time.Time `json:"used_at,omitempty" db:"used_at"`
 }
 

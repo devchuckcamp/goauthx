@@ -46,7 +46,7 @@ func NewTokenManager(secret string, accessTokenExpiry time.Duration, issuer, aud
 // GenerateAccessToken generates a new JWT access token
 func (tm *TokenManager) GenerateAccessToken(userID, email string, roles []string) (string, time.Time, error) {
 	expiresAt := time.Now().Add(tm.accessTokenExpiry)
-	
+
 	claims := &Claims{
 		UserID: userID,
 		Email:  email,
@@ -60,13 +60,13 @@ func (tm *TokenManager) GenerateAccessToken(userID, email string, roles []string
 			Subject:   userID,
 		},
 	}
-	
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(tm.secret)
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("failed to sign token: %w", err)
 	}
-	
+
 	return tokenString, expiresAt, nil
 }
 
@@ -79,16 +79,16 @@ func (tm *TokenManager) ValidateAccessToken(tokenString string) (*Claims, error)
 		}
 		return tm.secret, nil
 	})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
-	
+
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token")
 	}
-	
+
 	return claims, nil
 }
 
@@ -99,7 +99,7 @@ func GenerateRefreshToken(length int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)
 	}
-	
+
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 

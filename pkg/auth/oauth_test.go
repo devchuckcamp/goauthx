@@ -21,13 +21,13 @@ type MockOAuthStore struct {
 func NewMockOAuthStore() *MockOAuthStore {
 	return &MockOAuthStore{
 		MockStore: MockStore{
-			users:          make(map[string]*models.User),
-			usersByEmail:   make(map[string]*models.User),
-			refreshTokens:  make(map[string]*models.RefreshToken),
-			roles:          make(map[string]*models.Role),
-			rolesByName:    make(map[string]*models.Role),
-			userRoles:      make(map[string][]string),
-			roleUsers:      make(map[string][]string),
+			users:              make(map[string]*models.User),
+			usersByEmail:       make(map[string]*models.User),
+			refreshTokens:      make(map[string]*models.RefreshToken),
+			roles:              make(map[string]*models.Role),
+			rolesByName:        make(map[string]*models.Role),
+			userRoles:          make(map[string][]string),
+			roleUsers:          make(map[string][]string),
 			emailVerifications: make(map[string]*models.EmailVerification),
 			passwordResets:     make(map[string]*models.PasswordReset),
 		},
@@ -77,7 +77,7 @@ func (m *MockOAuthStore) DeleteOAuthAccount(ctx context.Context, id string) erro
 	if !exists {
 		return ErrUserNotFound
 	}
-	
+
 	key := string(account.Provider) + ":" + account.ProviderID
 	delete(m.oauthByProviderID, key)
 	delete(m.oauthAccounts, id)
@@ -146,8 +146,8 @@ func TestGetGoogleOAuthURL(t *testing.T) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[0:len(substr)] == substr[:] || 
-		   (len(s) > len(substr) && contains(s[1:], substr))
+	return len(s) >= len(substr) && s[0:len(substr)] == substr[:] ||
+		(len(s) > len(substr) && contains(s[1:], substr))
 }
 
 func TestHandleGoogleOAuthCallback_NewUser(t *testing.T) {
@@ -168,16 +168,16 @@ func TestHandleGoogleOAuthCallback_NewUser(t *testing.T) {
 
 	// Note: In real scenario, we'd need to mock the OAuth token exchange
 	// For this test, we're testing the structure and error handling
-	
+
 	// Test with OAuth disabled
 	cfg.OAuth.Google.Enabled = false
 	service, _ = NewService(cfg, store)
-	
+
 	_, err = service.HandleGoogleOAuthCallback(context.Background(), GoogleOAuthCallbackRequest{
 		Code:  "test-code",
 		State: "test-state",
 	})
-	
+
 	if err == nil {
 		t.Error("Expected error when OAuth is disabled, got none")
 	}
@@ -443,11 +443,11 @@ func TestUnlinkGoogleOAuth(t *testing.T) {
 	cfg.JWT.Secret = "test-secret-key-minimum-32-characters-long"
 
 	tests := []struct {
-		name           string
-		hasPassword    bool
-		oauthCount     int
-		expectError    bool
-		errorContains  string
+		name          string
+		hasPassword   bool
+		oauthCount    int
+		expectError   bool
+		errorContains string
 	}{
 		{
 			name:        "User with password and one OAuth - should succeed",
@@ -546,9 +546,9 @@ func TestUnlinkGoogleOAuth(t *testing.T) {
 }
 
 func containsStr(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || s[0:len(substr)] == substr || 
-		    (len(s) > len(substr) && containsStr(s[1:], substr)))
+	return len(s) >= len(substr) &&
+		(s == substr || s[0:len(substr)] == substr ||
+			(len(s) > len(substr) && containsStr(s[1:], substr)))
 }
 
 func TestParseGoogleOAuthCallback(t *testing.T) {

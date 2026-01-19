@@ -71,6 +71,9 @@ func (h *AdminHandlers) RegisterRoutes(mux *http.ServeMux) {
 	// User role management routes
 	mux.Handle(h.routes.GetUserRolesPath, adminMiddleware(http.HandlerFunc(h.handleUserRoles)))
 
+	// User permission management routes
+	mux.Handle(h.routes.GetUserPermissionsPath, adminMiddleware(http.HandlerFunc(h.handleUserPermissions)))
+
 	// Role permission management routes
 	mux.Handle(h.routes.GetRolePermissionsPath, adminMiddleware(http.HandlerFunc(h.handleRolePermissions)))
 }
@@ -433,6 +436,113 @@ func (h *AdminHandlers) handleUserRoles(w http.ResponseWriter, r *http.Request) 
 	default:
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 	}
+}
+
+// handleUserPermissions handles user permission management endpoints
+func (h *AdminHandlers) handleUserPermissions(w http.ResponseWriter, r *http.Request) {
+	userID, subResource, permID := extractSubResource(r.URL.Path, h.routes.GetUserPermissionsPath)
+	if userID == "" {
+		writeError(w, http.StatusBadRequest, auth.ErrInvalidCredentials)
+		return
+	}
+
+	if subResource != "permissions" {
+		writeError(w, http.StatusNotFound, http.ErrNotSupported)
+		return
+	}
+
+	// Ensure underlying store supports user-permission operations
+	userPermStore, ok := h.store.(store.UserPermissionStore)
+	if !ok {
+		writeJSON(w, http.StatusNotImplemented, ErrorResponse{
+			Error:   "user permissions not supported by store",
+			Message: "Not Implemented",
+		})
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		h.getUserPermissions(w, r, userID, userPermStore)
+	case http.MethodPost:
+		h.grantUserPermission(w, r, userID, userPermStore)
+	case http.MethodDelete:
+		if permID == "" {
+			writeError(w, http.StatusBadRequest, auth.ErrInvalidCredentials)
+			return
+		}
+		h.revokeUserPermission(w, r, userID, permID, userPermStore)
+	default:
+		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
+	}
+}
+
+func (h *AdminHandlers) getUserPermissions(w http.ResponseWriter, r *http.Request, userID string, userPermStore store.UserPermissionStore) {
+	direct, err := userPermStore.GetUserDirectPermissions(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	effective, err := h.service.GetUserPermissions(r.Context(), userID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"user_id":               userID,
+		"direct_permissions":    direct,
+		"direct_count":          len(direct),
+		"effective_permissions": effective,
+		"effective_count":       len(effective),
+	})
+}
+
+func (h *AdminHandlers) grantUserPermission(w http.ResponseWriter, r *http.Request, userID string, userPermStore store.UserPermissionStore) {
+	var req GrantPermissionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	var permissionID string
+	if req.PermissionID != "" {
+		permissionID = req.PermissionID
+	} else if req.PermissionName != "" {
+		perm, err := h.store.GetPermissionByName(r.Context(), req.PermissionName)
+		if err != nil {
+			writeError(w, http.StatusNotFound, err)
+			return
+		}
+		permissionID = perm.ID
+	} else {
+		writeJSON(w, http.StatusBadRequest, ErrorResponse{
+			Error:   "permission_id or permission_name is required",
+			Message: "Bad Request",
+		})
+		return
+	}
+
+	if err := userPermStore.GrantUserPermission(r.Context(), userID, permissionID); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SuccessResponse{
+		Message: "Permission granted successfully",
+	})
+}
+
+func (h *AdminHandlers) revokeUserPermission(w http.ResponseWriter, r *http.Request, userID, permID string, userPermStore store.UserPermissionStore) {
+	if err := userPermStore.RevokeUserPermission(r.Context(), userID, permID); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, SuccessResponse{
+		Message: "Permission revoked successfully",
+	})
 }
 
 // getUserRoles returns all roles for a user

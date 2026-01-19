@@ -14,12 +14,12 @@ func (s *SQLStore) AssignRole(ctx context.Context, userID, roleID string) error 
 	if s.driver == "postgres" {
 		query = `INSERT INTO user_roles (user_id, role_id, assigned_at) VALUES ($1, $2, $3)`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, userID, roleID, time.Now())
 	if err != nil {
 		return fmt.Errorf("failed to assign role: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -29,12 +29,12 @@ func (s *SQLStore) RemoveRole(ctx context.Context, userID, roleID string) error 
 	if s.driver == "postgres" {
 		query = `DELETE FROM user_roles WHERE user_id = $1 AND role_id = $2`
 	}
-	
+
 	_, err := s.executor().ExecContext(ctx, query, userID, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to remove role: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -56,13 +56,13 @@ func (s *SQLStore) GetUserRoles(ctx context.Context, userID string) ([]*models.R
 			ORDER BY r.name ASC
 		`
 	}
-	
+
 	rows, err := s.executor().QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var roles []*models.Role
 	for rows.Next() {
 		role := &models.Role{}
@@ -71,11 +71,11 @@ func (s *SQLStore) GetUserRoles(ctx context.Context, userID string) ([]*models.R
 		}
 		roles = append(roles, role)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating roles: %w", err)
 	}
-	
+
 	return roles, nil
 }
 
@@ -97,13 +97,13 @@ func (s *SQLStore) GetRoleUsers(ctx context.Context, roleID string) ([]*models.U
 			ORDER BY u.email ASC
 		`
 	}
-	
+
 	rows, err := s.executor().QueryContext(ctx, query, roleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role users: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var users []*models.User
 	for rows.Next() {
 		user := &models.User{}
@@ -112,11 +112,11 @@ func (s *SQLStore) GetRoleUsers(ctx context.Context, roleID string) ([]*models.U
 		}
 		users = append(users, user)
 	}
-	
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating users: %w", err)
 	}
-	
+
 	return users, nil
 }
 
@@ -136,12 +136,12 @@ func (s *SQLStore) HasRole(ctx context.Context, userID, roleName string) (bool, 
 			WHERE ur.user_id = $1 AND r.name = $2
 		`
 	}
-	
+
 	var count int
 	err := s.executor().QueryRowContext(ctx, query, userID, roleName).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("failed to check role: %w", err)
 	}
-	
+
 	return count > 0, nil
 }

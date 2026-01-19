@@ -199,8 +199,8 @@ func TestIsValidPermissionName(t *testing.T) {
 
 func TestGetRoleDescription(t *testing.T) {
 	tests := []struct {
-		role            RoleName
-		expectNonEmpty  bool
+		role           RoleName
+		expectNonEmpty bool
 	}{
 		{RoleAdmin, true},
 		{RoleManager, true},

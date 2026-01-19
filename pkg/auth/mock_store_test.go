@@ -22,6 +22,7 @@ type MockStore struct {
 	userRoles          map[string][]string // userID -> roleIDs
 	roleUsers          map[string][]string // roleID -> userIDs
 	rolePermissions    map[string][]string // roleID -> permissionIDs
+	userPermissions    map[string][]string // userID -> permissionIDs (direct grants)
 	emailVerifications map[string]*models.EmailVerification
 	passwordResets     map[string]*models.PasswordReset
 }
@@ -39,6 +40,7 @@ func NewMockStore() *MockStore {
 		userRoles:          make(map[string][]string),
 		roleUsers:          make(map[string][]string),
 		rolePermissions:    make(map[string][]string),
+		userPermissions:    make(map[string][]string),
 		emailVerifications: make(map[string]*models.EmailVerification),
 		passwordResets:     make(map[string]*models.PasswordReset),
 	}
@@ -223,7 +225,7 @@ func (m *MockStore) RemoveRole(ctx context.Context, userID, roleID string) error
 			break
 		}
 	}
-	
+
 	// Remove from roleUsers
 	users := m.roleUsers[roleID]
 	for i, id := range users {
@@ -232,7 +234,7 @@ func (m *MockStore) RemoveRole(ctx context.Context, userID, roleID string) error
 			break
 		}
 	}
-	
+
 	return nil
 }
 
@@ -263,7 +265,7 @@ func (m *MockStore) HasRole(ctx context.Context, userID, roleName string) (bool,
 	if !exists {
 		return false, nil
 	}
-	
+
 	roleIDs := m.userRoles[userID]
 	for _, roleID := range roleIDs {
 		if roleID == role.ID {
@@ -327,6 +329,16 @@ func (m *MockStore) HasRolePermission(ctx context.Context, roleID, permissionID 
 }
 
 func (m *MockStore) HasPermissionByName(ctx context.Context, userID, permissionName string) (bool, error) {
+	// Check direct permissions first
+	permIDs := m.userPermissions[userID]
+	for _, permID := range permIDs {
+		if perm, exists := m.permissions[permID]; exists {
+			if perm.Name == permissionName {
+				return true, nil
+			}
+		}
+	}
+
 	// Get user's roles
 	roleIDs := m.userRoles[userID]
 
@@ -342,6 +354,34 @@ func (m *MockStore) HasPermissionByName(ctx context.Context, userID, permissionN
 		}
 	}
 	return false, nil
+}
+
+// User-Permission operations (optional)
+func (m *MockStore) GrantUserPermission(ctx context.Context, userID, permissionID string) error {
+	m.userPermissions[userID] = append(m.userPermissions[userID], permissionID)
+	return nil
+}
+
+func (m *MockStore) RevokeUserPermission(ctx context.Context, userID, permissionID string) error {
+	perms := m.userPermissions[userID]
+	for i, id := range perms {
+		if id == permissionID {
+			m.userPermissions[userID] = append(perms[:i], perms[i+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
+func (m *MockStore) GetUserDirectPermissions(ctx context.Context, userID string) ([]*models.Permission, error) {
+	permissionIDs := m.userPermissions[userID]
+	var permissions []*models.Permission
+	for _, permID := range permissionIDs {
+		if perm, exists := m.permissions[permID]; exists {
+			permissions = append(permissions, perm)
+		}
+	}
+	return permissions, nil
 }
 
 // Refresh token operations

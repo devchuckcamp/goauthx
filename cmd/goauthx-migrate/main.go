@@ -20,40 +20,40 @@ const version = "1.0.0"
 
 func main() {
 	var (
-		dsn        = flag.String("dsn", "", "Database connection string (required)")
-		driver     = flag.String("driver", "", "Database driver: mysql, postgres, or sqlserver (required)")
-		showHelp   = flag.Bool("help", false, "Show help message")
+		dsn         = flag.String("dsn", "", "Database connection string (required)")
+		driver      = flag.String("driver", "", "Database driver: mysql, postgres, or sqlserver (required)")
+		showHelp    = flag.Bool("help", false, "Show help message")
 		showVersion = flag.Bool("version", false, "Show version")
 	)
-	
+
 	flag.Usage = usage
 	flag.Parse()
-	
+
 	if *showVersion {
 		fmt.Printf("goauthx-migrate version %s\n", version)
 		os.Exit(0)
 	}
-	
+
 	if *showHelp {
 		usage()
 		os.Exit(0)
 	}
-	
+
 	if *dsn == "" || *driver == "" {
 		fmt.Fprintln(os.Stderr, "Error: --dsn and --driver are required")
 		usage()
 		os.Exit(1)
 	}
-	
+
 	args := flag.Args()
 	if len(args) == 0 {
 		fmt.Fprintln(os.Stderr, "Error: command is required (up, down, or status)")
 		usage()
 		os.Exit(1)
 	}
-	
+
 	command := args[0]
-	
+
 	// Validate driver
 	var dbDriver config.DatabaseDriver
 	switch *driver {
@@ -67,7 +67,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: invalid driver '%s'. Must be mysql, postgres, or sqlserver\n", *driver)
 		os.Exit(1)
 	}
-	
+
 	// Connect to database
 	driverName := getDriverName(dbDriver)
 	db, err := sql.Open(driverName, *dsn)
@@ -76,19 +76,19 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	
+
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	if err := db.PingContext(ctx); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: failed to connect to database: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Create migrator
 	migrator := migrations.NewMigrator(db, dbDriver)
-	
+
 	// Execute command
 	switch command {
 	case "up":
@@ -97,20 +97,20 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("Migrations completed successfully")
-		
+
 	case "down":
 		if err := migrator.Down(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: rollback failed: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println("Rollback completed successfully")
-		
+
 	case "status":
 		if err := migrator.Status(ctx); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: failed to get status: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 	default:
 		fmt.Fprintf(os.Stderr, "Error: unknown command '%s'\n", command)
 		usage()

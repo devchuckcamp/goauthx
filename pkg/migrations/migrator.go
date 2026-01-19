@@ -12,11 +12,11 @@ import (
 
 // Migration represents a database migration
 type Migration struct {
-	Version     int
-	Name        string
-	UpSQL       string
-	DownSQL     string
-	AppliedAt   *time.Time
+	Version   int
+	Name      string
+	UpSQL     string
+	DownSQL   string
+	AppliedAt *time.Time
 }
 
 // Migrator handles database migrations
@@ -39,19 +39,19 @@ func (m *Migrator) Up(ctx context.Context) error {
 	if err := m.ensureMigrationsTable(ctx); err != nil {
 		return fmt.Errorf("failed to ensure migrations table: %w", err)
 	}
-	
+
 	// Get applied migrations
 	applied, err := m.getAppliedMigrations(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
 	}
-	
+
 	// Get all migrations
 	migrations, err := m.loadMigrations()
 	if err != nil {
 		return fmt.Errorf("failed to load migrations: %w", err)
 	}
-	
+
 	// Filter pending migrations
 	pending := make([]*Migration, 0)
 	for _, migration := range migrations {
@@ -59,12 +59,12 @@ func (m *Migrator) Up(ctx context.Context) error {
 			pending = append(pending, migration)
 		}
 	}
-	
+
 	if len(pending) == 0 {
 		fmt.Println("No pending migrations")
 		return nil
 	}
-	
+
 	// Apply pending migrations
 	for _, migration := range pending {
 		fmt.Printf("Applying migration %d: %s\n", migration.Version, migration.Name)
@@ -73,7 +73,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 		}
 		fmt.Printf("Migration %d applied successfully\n", migration.Version)
 	}
-	
+
 	return nil
 }
 
@@ -83,24 +83,24 @@ func (m *Migrator) Down(ctx context.Context) error {
 	if err := m.ensureMigrationsTable(ctx); err != nil {
 		return fmt.Errorf("failed to ensure migrations table: %w", err)
 	}
-	
+
 	// Get last applied migration
 	lastVersion, err := m.getLastAppliedMigration(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get last applied migration: %w", err)
 	}
-	
+
 	if lastVersion == 0 {
 		fmt.Println("No migrations to roll back")
 		return nil
 	}
-	
+
 	// Load migrations
 	migrations, err := m.loadMigrations()
 	if err != nil {
 		return fmt.Errorf("failed to load migrations: %w", err)
 	}
-	
+
 	// Find the migration to roll back
 	var migration *Migration
 	for _, m := range migrations {
@@ -109,17 +109,17 @@ func (m *Migrator) Down(ctx context.Context) error {
 			break
 		}
 	}
-	
+
 	if migration == nil {
 		return fmt.Errorf("migration %d not found", lastVersion)
 	}
-	
+
 	fmt.Printf("Rolling back migration %d: %s\n", migration.Version, migration.Name)
 	if err := m.rollbackMigration(ctx, migration); err != nil {
 		return fmt.Errorf("failed to rollback migration %d: %w", migration.Version, err)
 	}
 	fmt.Printf("Migration %d rolled back successfully\n", migration.Version)
-	
+
 	return nil
 }
 
@@ -129,19 +129,19 @@ func (m *Migrator) Status(ctx context.Context) error {
 	if err := m.ensureMigrationsTable(ctx); err != nil {
 		return fmt.Errorf("failed to ensure migrations table: %w", err)
 	}
-	
+
 	// Get applied migrations
 	applied, err := m.getAppliedMigrations(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get applied migrations: %w", err)
 	}
-	
+
 	// Load migrations
 	migrations, err := m.loadMigrations()
 	if err != nil {
 		return fmt.Errorf("failed to load migrations: %w", err)
 	}
-	
+
 	fmt.Println("Migration Status:")
 	fmt.Println("================")
 	for _, migration := range migrations {
@@ -151,13 +151,13 @@ func (m *Migrator) Status(ctx context.Context) error {
 		}
 		fmt.Printf("[%s] %d: %s\n", status, migration.Version, migration.Name)
 	}
-	
+
 	return nil
 }
 
 func (m *Migrator) ensureMigrationsTable(ctx context.Context) error {
 	var createSQL string
-	
+
 	switch m.driver {
 	case config.MySQL:
 		createSQL = `
@@ -187,7 +187,7 @@ func (m *Migrator) ensureMigrationsTable(ctx context.Context) error {
 	default:
 		return fmt.Errorf("unsupported database driver: %s", m.driver)
 	}
-	
+
 	_, err := m.db.ExecContext(ctx, createSQL)
 	return err
 }
@@ -198,7 +198,7 @@ func (m *Migrator) getAppliedMigrations(ctx context.Context) ([]int, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var versions []int
 	for rows.Next() {
 		var version int
@@ -207,7 +207,7 @@ func (m *Migrator) getAppliedMigrations(ctx context.Context) ([]int, error) {
 		}
 		versions = append(versions, version)
 	}
-	
+
 	return versions, rows.Err()
 }
 
@@ -223,27 +223,27 @@ func (m *Migrator) applyMigration(ctx context.Context, migration *Migration) err
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// Execute up SQL
 	if _, err := tx.ExecContext(ctx, migration.UpSQL); err != nil {
 		return err
 	}
-	
+
 	// Record migration
 	placeholder := "?"
 	if m.driver == config.Postgres {
 		placeholder = "$1, $2"
 	}
-	
+
 	query := fmt.Sprintf("INSERT INTO schema_migrations (version, name) VALUES (%s)", placeholder)
 	if m.driver == config.Postgres {
 		query = "INSERT INTO schema_migrations (version, name) VALUES ($1, $2)"
 	}
-	
+
 	if _, err := tx.ExecContext(ctx, query, migration.Version, migration.Name); err != nil {
 		return err
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -253,23 +253,23 @@ func (m *Migrator) rollbackMigration(ctx context.Context, migration *Migration) 
 		return err
 	}
 	defer tx.Rollback()
-	
+
 	// Execute down SQL
 	if _, err := tx.ExecContext(ctx, migration.DownSQL); err != nil {
 		return err
 	}
-	
+
 	// Remove migration record
 	placeholder := "?"
 	if m.driver == config.Postgres {
 		placeholder = "$1"
 	}
-	
+
 	query := fmt.Sprintf("DELETE FROM schema_migrations WHERE version = %s", placeholder)
 	if _, err := tx.ExecContext(ctx, query, migration.Version); err != nil {
 		return err
 	}
-	
+
 	return tx.Commit()
 }
 
@@ -330,12 +330,18 @@ func (m *Migrator) loadMigrations() ([]*Migration, error) {
 			UpSQL:   getCreateOAuthAccountsTableSQL(m.driver),
 			DownSQL: getDropOAuthAccountsTableSQL(m.driver),
 		},
+		{
+			Version: 10,
+			Name:    "create_user_permissions_table",
+			UpSQL:   getCreateUserPermissionsTableSQL(m.driver),
+			DownSQL: "DROP TABLE IF EXISTS user_permissions",
+		},
 	}
-	
+
 	sort.Slice(migrations, func(i, j int) bool {
 		return migrations[i].Version < migrations[j].Version
 	})
-	
+
 	return migrations, nil
 }
 

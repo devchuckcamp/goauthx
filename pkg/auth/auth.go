@@ -16,29 +16,29 @@ import (
 var (
 	// ErrInvalidCredentials is returned when credentials are invalid
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	
+
 	// ErrUserNotFound is returned when a user is not found
 	ErrUserNotFound = errors.New("user not found")
-	
+
 	// ErrUserInactive is returned when a user account is inactive
 	ErrUserInactive = errors.New("user account is inactive")
-	
+
 	// ErrEmailAlreadyExists is returned when an email is already registered
 	ErrEmailAlreadyExists = errors.New("email already exists")
-	
+
 	// ErrInvalidRefreshToken is returned when a refresh token is invalid
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	
+
 	// ErrPermissionDenied is returned when a user lacks required permissions
 	ErrPermissionDenied = errors.New("permission denied")
 )
 
 // Service provides authentication and authorization functionality
 type Service struct {
-	store        store.Store
-	tokenManager *tokens.TokenManager
+	store          store.Store
+	tokenManager   *tokens.TokenManager
 	passwordHasher *password.Hasher
-	config       *config.Config
+	config         *config.Config
 }
 
 // NewService creates a new authentication service
@@ -46,16 +46,16 @@ func NewService(cfg *config.Config, store store.Store) (*Service, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
-	
+
 	tokenManager := tokens.NewTokenManager(
 		cfg.JWT.Secret,
 		cfg.JWT.AccessTokenExpiry,
 		cfg.JWT.Issuer,
 		cfg.JWT.Audience,
 	)
-	
+
 	passwordHasher := password.NewHasher(cfg.Password.BcryptCost)
-	
+
 	return &Service{
 		store:          store,
 		tokenManager:   tokenManager,
@@ -119,19 +119,19 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*AuthRespo
 	if err := password.IsValidPassword(req.Password, s.config.Password.MinLength); err != nil {
 		return nil, err
 	}
-	
+
 	// Check if email already exists
 	existingUser, err := s.store.GetUserByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
 		return nil, ErrEmailAlreadyExists
 	}
-	
+
 	// Hash password
 	hashedPassword, err := s.passwordHasher.Hash(req.Password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
-	
+
 	// Create user
 	user := &models.User{
 		Email:        req.Email,
@@ -140,11 +140,11 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*AuthRespo
 		LastName:     req.LastName,
 		Active:       true,
 	}
-	
+
 	if err := s.store.CreateUser(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
-	
+
 	// Generate tokens
 	return s.generateAuthResponse(ctx, user)
 }
@@ -156,17 +156,17 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*AuthResponse, e
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
-	
+
 	// Check if user is active
 	if !user.Active {
 		return nil, ErrUserInactive
 	}
-	
+
 	// Verify password
 	if err := s.passwordHasher.Verify(req.Password, user.PasswordHash); err != nil {
 		return nil, ErrInvalidCredentials
 	}
-	
+
 	// Generate tokens
 	return s.generateAuthResponse(ctx, user)
 }
@@ -183,23 +183,23 @@ func (s *Service) RefreshAccessToken(ctx context.Context, refreshTokenString str
 	if err != nil {
 		return nil, ErrInvalidRefreshToken
 	}
-	
+
 	// Validate refresh token
 	if !refreshToken.IsValid() {
 		return nil, ErrInvalidRefreshToken
 	}
-	
+
 	// Get user
 	user, err := s.store.GetUserByID(ctx, refreshToken.UserID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
-	
+
 	// Check if user is active
 	if !user.Active {
 		return nil, ErrUserInactive
 	}
-	
+
 	// Generate new tokens
 	return s.generateAuthResponse(ctx, user)
 }
@@ -216,27 +216,7 @@ func (s *Service) HasRole(ctx context.Context, userID, roleName string) (bool, e
 
 // HasPermission checks if a user has a specific permission
 func (s *Service) HasPermission(ctx context.Context, userID, permissionName string) (bool, error) {
-	// Get user roles
-	roles, err := s.store.GetUserRoles(ctx, userID)
-	if err != nil {
-		return false, err
-	}
-	
-	// Check each role for the permission
-	for _, role := range roles {
-		permissions, err := s.store.GetRolePermissions(ctx, role.ID)
-		if err != nil {
-			return false, err
-		}
-		
-		for _, perm := range permissions {
-			if perm.Name == permissionName {
-				return true, nil
-			}
-		}
-	}
-	
-	return false, nil
+	return s.store.HasPermissionByName(ctx, userID, permissionName)
 }
 
 // GetUserPermissions retrieves all permissions for a user
@@ -256,6 +236,20 @@ func (s *Service) GetUserPermissions(ctx context.Context, userID string) ([]*mod
 		}
 
 		for _, perm := range permissions {
+			permMap[perm.ID] = perm
+		}
+	}
+
+	// Also include permissions granted directly to the user (if supported by the store)
+	type userDirectPermissionReader interface {
+		GetUserDirectPermissions(ctx context.Context, userID string) ([]*models.Permission, error)
+	}
+	if reader, ok := s.store.(userDirectPermissionReader); ok {
+		directPerms, err := reader.GetUserDirectPermissions(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		for _, perm := range directPerms {
 			permMap[perm.ID] = perm
 		}
 	}
@@ -418,35 +412,35 @@ func (s *Service) generateAuthResponse(ctx context.Context, user *models.User) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
-	
+
 	roleNames := make([]string, len(roles))
 	for i, role := range roles {
 		roleNames[i] = role.Name
 	}
-	
+
 	// Generate access token
 	accessToken, expiresAt, err := s.tokenManager.GenerateAccessToken(user.ID, user.Email, roleNames)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
-	
+
 	// Generate refresh token
 	refreshTokenString, err := tokens.GenerateRefreshToken(s.config.Token.RefreshTokenLength)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
-	
+
 	// Save refresh token
 	refreshToken := &models.RefreshToken{
 		UserID:    user.ID,
 		Token:     refreshTokenString,
 		ExpiresAt: time.Now().Add(s.config.Token.RefreshTokenExpiry),
 	}
-	
+
 	if err := s.store.CreateRefreshToken(ctx, refreshToken); err != nil {
 		return nil, fmt.Errorf("failed to save refresh token: %w", err)
 	}
-	
+
 	return &AuthResponse{
 		User:         user,
 		AccessToken:  accessToken,
@@ -467,34 +461,34 @@ func (s *Service) ChangePassword(ctx context.Context, userID string, req ChangeP
 	if err != nil {
 		return ErrUserNotFound
 	}
-	
+
 	// Verify old password
 	if err := s.passwordHasher.Verify(req.OldPassword, user.PasswordHash); err != nil {
 		return ErrInvalidCredentials
 	}
-	
+
 	// Validate new password
 	if err := password.IsValidPassword(req.NewPassword, s.config.Password.MinLength); err != nil {
 		return err
 	}
-	
+
 	// Hash new password
 	hashedPassword, err := s.passwordHasher.Hash(req.NewPassword)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
-	
+
 	// Update password
 	user.PasswordHash = hashedPassword
 	if err := s.store.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
-	
+
 	// Revoke all refresh tokens for security
 	if err := s.store.RevokeAllRefreshTokensForUser(ctx, userID); err != nil {
 		return fmt.Errorf("failed to revoke tokens: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -506,27 +500,27 @@ func (s *Service) RequestPasswordReset(ctx context.Context, email string) (strin
 		// Don't reveal if email exists
 		return "", ErrUserNotFound
 	}
-	
+
 	// Generate reset token
 	resetToken, err := tokens.GenerateRefreshToken(64)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate reset token: %w", err)
 	}
-	
+
 	// Save password reset
 	passwordReset := &models.PasswordReset{
 		UserID:    user.ID,
 		Token:     resetToken,
 		ExpiresAt: time.Now().Add(1 * time.Hour), // 1 hour expiry
 	}
-	
+
 	if err := s.store.CreatePasswordReset(ctx, passwordReset); err != nil {
 		return "", fmt.Errorf("failed to save password reset: %w", err)
 	}
-	
+
 	// In production, send email here
 	// emailService.SendPasswordResetEmail(user.Email, resetToken)
-	
+
 	return resetToken, nil
 }
 
@@ -537,45 +531,45 @@ func (s *Service) ResetPassword(ctx context.Context, req ResetPasswordRequest) e
 	if err != nil {
 		return errors.New("invalid or expired reset token")
 	}
-	
+
 	// Validate token
 	if !passwordReset.IsValid() {
 		return errors.New("invalid or expired reset token")
 	}
-	
+
 	// Validate new password
 	if err := password.IsValidPassword(req.NewPassword, s.config.Password.MinLength); err != nil {
 		return err
 	}
-	
+
 	// Get user
 	user, err := s.store.GetUserByID(ctx, passwordReset.UserID)
 	if err != nil {
 		return ErrUserNotFound
 	}
-	
+
 	// Hash new password
 	hashedPassword, err := s.passwordHasher.Hash(req.NewPassword)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
-	
+
 	// Update password
 	user.PasswordHash = hashedPassword
 	if err := s.store.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
 	}
-	
+
 	// Mark token as used
 	if err := s.store.MarkPasswordResetUsed(ctx, passwordReset.ID); err != nil {
 		return fmt.Errorf("failed to mark token as used: %w", err)
 	}
-	
+
 	// Revoke all refresh tokens for security
 	if err := s.store.RevokeAllRefreshTokensForUser(ctx, passwordReset.UserID); err != nil {
 		return fmt.Errorf("failed to revoke tokens: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -586,29 +580,29 @@ func (s *Service) VerifyEmail(ctx context.Context, token string) error {
 	if err != nil {
 		return errors.New("invalid or expired verification token")
 	}
-	
+
 	// Validate token
 	if !verification.IsValid() {
 		return errors.New("invalid or expired verification token")
 	}
-	
+
 	// Get user
 	user, err := s.store.GetUserByID(ctx, verification.UserID)
 	if err != nil {
 		return ErrUserNotFound
 	}
-	
+
 	// Mark email as verified
 	user.EmailVerified = true
 	if err := s.store.UpdateUser(ctx, user); err != nil {
 		return fmt.Errorf("failed to update user: %w", err)
 	}
-	
+
 	// Mark token as used
 	if err := s.store.MarkEmailVerificationUsed(ctx, verification.ID); err != nil {
 		return fmt.Errorf("failed to mark token as used: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -619,31 +613,31 @@ func (s *Service) ResendVerificationEmail(ctx context.Context, userID string) (s
 	if err != nil {
 		return "", ErrUserNotFound
 	}
-	
+
 	// Check if already verified
 	if user.EmailVerified {
 		return "", errors.New("email already verified")
 	}
-	
+
 	// Generate verification token
 	verificationToken, err := tokens.GenerateRefreshToken(64)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate verification token: %w", err)
 	}
-	
+
 	// Save email verification
 	emailVerification := &models.EmailVerification{
 		UserID:    user.ID,
 		Token:     verificationToken,
 		ExpiresAt: time.Now().Add(24 * time.Hour), // 24 hour expiry
 	}
-	
+
 	if err := s.store.CreateEmailVerification(ctx, emailVerification); err != nil {
 		return "", fmt.Errorf("failed to save email verification: %w", err)
 	}
-	
+
 	// In production, send email here
 	// emailService.SendVerificationEmail(user.Email, verificationToken)
-	
+
 	return verificationToken, nil
 }

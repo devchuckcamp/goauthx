@@ -21,16 +21,16 @@ const (
 type Config struct {
 	// Database configuration
 	Database DatabaseConfig
-	
+
 	// JWT configuration
 	JWT JWTConfig
-	
+
 	// Password configuration
 	Password PasswordConfig
-	
+
 	// Token configuration
 	Token TokenConfig
-	
+
 	// OAuth configuration (optional)
 	OAuth OAuthConfig
 }
@@ -45,13 +45,13 @@ type OAuthConfig struct {
 type GoogleOAuthConfig struct {
 	//  is the OAuth2 client ID from Google
 	ClientID string
-	
+
 	// ClientSecret is the OAuth2 client secret from Google
 	ClientSecret string
-	
+
 	// RedirectURL is the callback URL after OAuth authentication
 	RedirectURL string
-	
+
 	// Enabled indicates if Google OAuth is enabled
 	Enabled bool
 }
@@ -60,16 +60,16 @@ type GoogleOAuthConfig struct {
 type DatabaseConfig struct {
 	// Driver specifies the database driver (mysql, postgres, sqlserver)
 	Driver DatabaseDriver
-	
+
 	// DSN is the data source name (connection string)
 	DSN string
-	
+
 	// MaxOpenConns sets the maximum number of open connections to the database
 	MaxOpenConns int
-	
+
 	// MaxIdleConns sets the maximum number of connections in the idle connection pool
 	MaxIdleConns int
-	
+
 	// ConnMaxLifetime sets the maximum amount of time a connection may be reused
 	ConnMaxLifetime time.Duration
 }
@@ -78,13 +78,13 @@ type DatabaseConfig struct {
 type JWTConfig struct {
 	// Secret is the secret key used to sign JWT tokens
 	Secret string
-	
+
 	// AccessTokenExpiry is the duration for which access tokens are valid
 	AccessTokenExpiry time.Duration
-	
+
 	// Issuer is the issuer claim for JWT tokens
 	Issuer string
-	
+
 	// Audience is the audience claim for JWT tokens
 	Audience string
 }
@@ -93,7 +93,7 @@ type JWTConfig struct {
 type PasswordConfig struct {
 	// MinLength is the minimum password length
 	MinLength int
-	
+
 	// BcryptCost is the cost parameter for bcrypt (4-31, default 12)
 	BcryptCost int
 }
@@ -102,7 +102,7 @@ type PasswordConfig struct {
 type TokenConfig struct {
 	// RefreshTokenExpiry is the duration for which refresh tokens are valid
 	RefreshTokenExpiry time.Duration
-	
+
 	// RefreshTokenLength is the length of the random refresh token string
 	RefreshTokenLength int
 }
@@ -111,40 +111,40 @@ type TokenConfig struct {
 type RouteConfig struct {
 	// RegisterPath is the path for user registration endpoint
 	RegisterPath string
-	
+
 	// LoginPath is the path for user login endpoint
 	LoginPath string
-	
+
 	// LogoutPath is the path for user logout endpoint
 	LogoutPath string
-	
+
 	// RefreshPath is the path for token refresh endpoint
 	RefreshPath string
-	
+
 	// ProfilePath is the path for user profile endpoint
 	ProfilePath string
-	
+
 	// ChangePasswordPath is the path for changing password endpoint
 	ChangePasswordPath string
-	
+
 	// RequestPasswordResetPath is the path for requesting password reset
 	RequestPasswordResetPath string
-	
+
 	// ResetPasswordPath is the path for resetting password with token
 	ResetPasswordPath string
-	
+
 	// VerifyEmailPath is the path for email verification endpoint
 	VerifyEmailPath string
-	
+
 	// ResendVerificationPath is the path for resending verification email
 	ResendVerificationPath string
-	
+
 	// GoogleOAuthPath is the path for initiating Google OAuth login
 	GoogleOAuthPath string
-	
+
 	// GoogleOAuthCallbackPath is the path for Google OAuth callback
 	GoogleOAuthCallbackPath string
-	
+
 	// UnlinkGoogleOAuthPath is the path for unlinking Google OAuth account
 	UnlinkGoogleOAuthPath string
 }
@@ -154,19 +154,19 @@ func (c *Config) Validate() error {
 	if err := c.Database.Validate(); err != nil {
 		return fmt.Errorf("database config: %w", err)
 	}
-	
+
 	if err := c.JWT.Validate(); err != nil {
 		return fmt.Errorf("jwt config: %w", err)
 	}
-	
+
 	if err := c.Password.Validate(); err != nil {
 		return fmt.Errorf("password config: %w", err)
 	}
-	
+
 	if err := c.Token.Validate(); err != nil {
 		return fmt.Errorf("token config: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -175,11 +175,11 @@ func (dc *DatabaseConfig) Validate() error {
 	if dc.Driver != MySQL && dc.Driver != Postgres && dc.Driver != SQLServer {
 		return fmt.Errorf("invalid database driver: %s (must be mysql, postgres, or sqlserver)", dc.Driver)
 	}
-	
+
 	if dc.DSN == "" {
 		return fmt.Errorf("database DSN is required")
 	}
-	
+
 	return nil
 }
 
@@ -188,15 +188,15 @@ func (jc *JWTConfig) Validate() error {
 	if jc.Secret == "" {
 		return fmt.Errorf("JWT secret is required")
 	}
-	
+
 	if len(jc.Secret) < 32 {
 		return fmt.Errorf("JWT secret must be at least 32 characters")
 	}
-	
+
 	if jc.AccessTokenExpiry <= 0 {
 		return fmt.Errorf("access token expiry must be positive")
 	}
-	
+
 	return nil
 }
 
@@ -205,11 +205,11 @@ func (pc *PasswordConfig) Validate() error {
 	if pc.MinLength < 8 {
 		return fmt.Errorf("minimum password length must be at least 8")
 	}
-	
+
 	if pc.BcryptCost < 4 || pc.BcryptCost > 31 {
 		return fmt.Errorf("bcrypt cost must be between 4 and 31")
 	}
-	
+
 	return nil
 }
 
@@ -218,11 +218,11 @@ func (tc *TokenConfig) Validate() error {
 	if tc.RefreshTokenExpiry <= 0 {
 		return fmt.Errorf("refresh token expiry must be positive")
 	}
-	
+
 	if tc.RefreshTokenLength < 32 {
 		return fmt.Errorf("refresh token length must be at least 32")
 	}
-	
+
 	return nil
 }
 
@@ -236,8 +236,8 @@ func DefaultConfig() *Config {
 		},
 		JWT: JWTConfig{
 			AccessTokenExpiry: 15 * time.Minute,
-			Issuer:           "goauthx",
-			Audience:         "goauthx-users",
+			Issuer:            "goauthx",
+			Audience:          "goauthx-users",
 		},
 		Password: PasswordConfig{
 			MinLength:  8,

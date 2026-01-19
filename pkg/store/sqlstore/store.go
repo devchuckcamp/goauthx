@@ -24,25 +24,25 @@ type SQLStore struct {
 // New creates a new SQLStore
 func New(cfg config.DatabaseConfig) (store.Store, error) {
 	driverName := getDriverName(cfg.Driver)
-	
+
 	db, err := sql.Open(driverName, cfg.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
-	
+
 	// Configure connection pool
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
 	db.SetMaxIdleConns(cfg.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	
+
 	// Test the connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	if err := db.PingContext(ctx); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	
+
 	return &SQLStore{
 		db:     db,
 		driver: cfg.Driver,
@@ -68,7 +68,7 @@ func (s *SQLStore) BeginTx(ctx context.Context) (store.Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	
+
 	return &SQLStore{
 		db:     s.db,
 		tx:     tx,

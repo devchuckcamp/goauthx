@@ -15,16 +15,16 @@ import (
 
 // Re-export commonly used types for convenience
 type (
-	Config                      = config.Config
-	DatabaseConfig              = config.DatabaseConfig
-	JWTConfig                   = config.JWTConfig
-	PasswordConfig              = config.PasswordConfig
-	TokenConfig                 = config.TokenConfig
-	RouteConfig                 = config.RouteConfig
-	DatabaseDriver              = config.DatabaseDriver
-	OAuthConfig                 = config.OAuthConfig
-	GoogleOAuthConfig           = config.GoogleOAuthConfig
-	AdminRouteConfig            = config.AdminRouteConfig
+	Config            = config.Config
+	DatabaseConfig    = config.DatabaseConfig
+	JWTConfig         = config.JWTConfig
+	PasswordConfig    = config.PasswordConfig
+	TokenConfig       = config.TokenConfig
+	RouteConfig       = config.RouteConfig
+	DatabaseDriver    = config.DatabaseDriver
+	OAuthConfig       = config.OAuthConfig
+	GoogleOAuthConfig = config.GoogleOAuthConfig
+	AdminRouteConfig  = config.AdminRouteConfig
 
 	User              = models.User
 	Role              = models.Role
@@ -51,8 +51,8 @@ type (
 	AuthMiddleware = middleware.AuthMiddleware
 	ContextKey     = middleware.ContextKey
 
-	Handlers       = handlers.Handlers
-	AdminHandlers  = handlers.AdminHandlers
+	Handlers      = handlers.Handlers
+	AdminHandlers = handlers.AdminHandlers
 
 	Store    = store.Store
 	Migrator = migrations.Migrator
@@ -67,9 +67,9 @@ type (
 
 // Database drivers
 const (
-	MySQL      = config.MySQL
-	Postgres   = config.Postgres
-	SQLServer  = config.SQLServer
+	MySQL     = config.MySQL
+	Postgres  = config.Postgres
+	SQLServer = config.SQLServer
 )
 
 // OAuth providers
@@ -131,12 +131,12 @@ const (
 
 // Common errors
 var (
-	ErrInvalidCredentials = auth.ErrInvalidCredentials
-	ErrUserNotFound       = auth.ErrUserNotFound
-	ErrUserInactive       = auth.ErrUserInactive
-	ErrEmailAlreadyExists = auth.ErrEmailAlreadyExists
+	ErrInvalidCredentials  = auth.ErrInvalidCredentials
+	ErrUserNotFound        = auth.ErrUserNotFound
+	ErrUserInactive        = auth.ErrUserInactive
+	ErrEmailAlreadyExists  = auth.ErrEmailAlreadyExists
 	ErrInvalidRefreshToken = auth.ErrInvalidRefreshToken
-	ErrPermissionDenied   = auth.ErrPermissionDenied
+	ErrPermissionDenied    = auth.ErrPermissionDenied
 )
 
 // NewService creates a new authentication service
@@ -191,16 +191,16 @@ func NewAdminHandlers(service *Service, store Store, cfg *handlers.AdminHandlers
 
 // RBAC helper functions
 var (
-	DefaultRoles           = rbac.DefaultRoles
-	DefaultPermissions     = rbac.DefaultPermissions
-	DefaultRolePermissions = rbac.DefaultRolePermissions
-	AllRoleNames           = rbac.AllRoleNames
-	AllPermissionNames     = rbac.AllPermissionNames
-	IsValidRoleName        = rbac.IsValidRoleName
-	IsValidPermissionName  = rbac.IsValidPermissionName
-	GetRoleDescription     = rbac.GetRoleDescription
+	DefaultRoles            = rbac.DefaultRoles
+	DefaultPermissions      = rbac.DefaultPermissions
+	DefaultRolePermissions  = rbac.DefaultRolePermissions
+	AllRoleNames            = rbac.AllRoleNames
+	AllPermissionNames      = rbac.AllPermissionNames
+	IsValidRoleName         = rbac.IsValidRoleName
+	IsValidPermissionName   = rbac.IsValidPermissionName
+	GetRoleDescription      = rbac.GetRoleDescription
 	GetPermissionDefinition = rbac.GetPermissionDefinition
-	DefaultRole            = rbac.DefaultRole
+	DefaultRole             = rbac.DefaultRole
 )
 
 // Helper functions from middleware package

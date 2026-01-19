@@ -21,7 +21,7 @@ func NewHandlers(service *auth.Service, routeConfig *config.RouteConfig) *Handle
 	if routeConfig == nil {
 		routeConfig = config.DefaultRouteConfig()
 	}
-	
+
 	return &Handlers{
 		service:    service,
 		middleware: middleware.NewAuthMiddleware(service),
@@ -38,11 +38,11 @@ func (h *Handlers) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(h.routes.RequestPasswordResetPath, h.RequestPasswordReset)
 	mux.HandleFunc(h.routes.ResetPasswordPath, h.ResetPassword)
 	mux.HandleFunc(h.routes.VerifyEmailPath, h.VerifyEmail)
-	
+
 	// OAuth routes
 	mux.HandleFunc(h.routes.GoogleOAuthPath, h.GoogleOAuthLogin)
 	mux.HandleFunc(h.routes.GoogleOAuthCallbackPath, h.GoogleOAuthCallback)
-	
+
 	// Protected routes (require authentication)
 	mux.Handle(h.routes.LogoutPath, h.middleware.Authenticate(http.HandlerFunc(h.Logout)))
 	mux.Handle(h.routes.ProfilePath, h.middleware.Authenticate(http.HandlerFunc(h.Profile)))
@@ -84,19 +84,19 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	var req auth.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	resp, err := h.service.Register(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusCreated, resp)
 }
 
@@ -106,19 +106,19 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	var req auth.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	resp, err := h.service.Login(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -128,18 +128,18 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials)
 		return
 	}
-	
+
 	if err := h.service.Logout(r.Context(), userID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Successfully logged out",
 	})
@@ -151,19 +151,19 @@ func (h *Handlers) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	var req auth.RefreshTokenRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	resp, err := h.service.RefreshAccessToken(r.Context(), req.RefreshToken)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -173,21 +173,21 @@ func (h *Handlers) Profile(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials)
 		return
 	}
-	
+
 	user, err := h.service.GetUserByID(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, err)
 		return
 	}
-	
+
 	roles, _ := middleware.GetUserRoles(r.Context())
-	
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"user":  user,
 		"roles": roles,
@@ -200,24 +200,24 @@ func (h *Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials)
 		return
 	}
-	
+
 	var req auth.ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	if err := h.service.ChangePassword(r.Context(), userID, req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Password changed successfully",
 	})
@@ -229,13 +229,13 @@ func (h *Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	var req auth.RequestPasswordResetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	token, err := h.service.RequestPasswordReset(r.Context(), req.Email)
 	if err != nil {
 		// Don't reveal if email exists for security
@@ -244,7 +244,7 @@ func (h *Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Password reset link has been sent",
 		Data: map[string]string{
@@ -259,18 +259,18 @@ func (h *Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	var req auth.ResetPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	if err := h.service.ResetPassword(r.Context(), req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Password reset successfully",
 	})
@@ -282,7 +282,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	token := r.URL.Query().Get("token")
 	if token == "" && r.Method == http.MethodPost {
 		var req auth.VerifyEmailRequest
@@ -292,17 +292,17 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		}
 		token = req.Token
 	}
-	
+
 	if token == "" {
 		writeError(w, http.StatusBadRequest, http.ErrMissingContentLength)
 		return
 	}
-	
+
 	if err := h.service.VerifyEmail(r.Context(), token); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Email verified successfully",
 	})
@@ -314,19 +314,19 @@ func (h *Handlers) ResendVerification(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials)
 		return
 	}
-	
+
 	token, err := h.service.ResendVerificationEmail(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Verification email has been sent",
 		Data: map[string]string{
@@ -341,14 +341,14 @@ func (h *Handlers) GoogleOAuthLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	// Generate state token for CSRF protection
 	state := r.URL.Query().Get("state")
 	if state == "" {
 		// In production, generate a secure random state and store it in session
 		state = "random-state-token"
 	}
-	
+
 	url, err := h.service.GetGoogleOAuthURL(auth.GoogleOAuthURLRequest{
 		State: state,
 	})
@@ -356,7 +356,7 @@ func (h *Handlers) GoogleOAuthLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	// Redirect to Google OAuth URL
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
@@ -367,23 +367,23 @@ func (h *Handlers) GoogleOAuthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	// Parse callback parameters
 	req, err := auth.ParseGoogleOAuthCallbackFromForm(r.URL.Query())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	// In production, verify state token matches the one stored in session
-	
+
 	// Handle OAuth callback
 	resp, err := h.service.HandleGoogleOAuthCallback(r.Context(), *req)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -393,27 +393,27 @@ func (h *Handlers) UnlinkGoogleOAuth(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, http.ErrNotSupported)
 		return
 	}
-	
+
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials)
 		return
 	}
-	
+
 	var req struct {
 		AccountID string `json:"account_id"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	if err := h.service.UnlinkGoogleOAuth(r.Context(), userID, req.AccountID); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	
+
 	writeJSON(w, http.StatusOK, SuccessResponse{
 		Message: "Google account unlinked successfully",
 	})
